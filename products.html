@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Products - BabyBoutique</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased min-h-screen flex flex-col">
+
+  <main class="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
+    
+    <div class="flex flex-col md:flex-row gap-8">
+      
+      <!-- Sidebar Filters -->
+      <aside class="md:w-1/4">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 class="font-bold text-lg mb-4">Filters</h2>
+          
+          <div class="mb-6">
+            <h3 class="font-semibold text-gray-700 mb-2">Category</h3>
+            <div class="space-y-2">
+              <label class="flex items-center"><input type="radio" name="cat" value="All" class="mr-2" checked> All</label>
+              <label class="flex items-center"><input type="radio" name="cat" value="Clothing" class="mr-2"> Clothing</label>
+              <label class="flex items-center"><input type="radio" name="cat" value="Toys" class="mr-2"> Toys</label>
+              <label class="flex items-center"><input type="radio" name="cat" value="Feeding" class="mr-2"> Feeding</label>
+              <label class="flex items-center"><input type="radio" name="cat" value="Diapers" class="mr-2"> Diapers</label>
+              <label class="flex items-center"><input type="radio" name="cat" value="Skincare" class="mr-2"> Skincare</label>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-gray-700 mb-2">Sort By</h3>
+            <select id="sort-select" class="w-full p-2 border border-gray-200 rounded focus:outline-none focus:border-pink-400">
+              <option value="popularity">Popularity</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Product Grid -->
+      <section class="md:w-3/4">
+        <h1 id="page-title" class="text-3xl font-bold mb-6">All Products</h1>
+        <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- JS fills this -->
+        </div>
+        <div id="empty-state" class="hidden text-center py-10">
+          <p class="text-gray-500">No products found matching your criteria.</p>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const grid = document.getElementById('product-grid');
+      const emptyState = document.getElementById('empty-state');
+      const pageTitle = document.getElementById('page-title');
+      const sortSelect = document.getElementById('sort-select');
+      const radios = document.querySelectorAll('input[name="cat"]');
+      
+      let currentCategory = window.getURLParam('category') || 'All';
+      let currentSort = 'popularity';
+
+      // Set initial radio
+      radios.forEach(r => {
+        if(r.value === currentCategory) r.checked = true;
+        r.addEventListener('change', (e) => {
+          currentCategory = e.target.value;
+          renderProducts();
+        });
+      });
+
+      sortSelect.addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        renderProducts();
+      });
+
+      function renderProducts() {
+        // Filter
+        let filtered = window.appData.products;
+        if (currentCategory !== 'All') {
+          filtered = filtered.filter(p => p.category === currentCategory);
+          pageTitle.textContent = currentCategory;
+        } else {
+          pageTitle.textContent = "All Products";
+        }
+
+        // Sort
+        filtered.sort((a, b) => {
+          if(currentSort === 'price-low') return a.price - b.price;
+          if(currentSort === 'price-high') return b.price - a.price;
+          return b.popularity - a.popularity;
+        });
+
+        // Render
+        grid.innerHTML = '';
+        if (filtered.length > 0) {
+          window.analytics.trackViewItemList(filtered, currentCategory === 'All' ? 'All Products' : currentCategory);
+        }
+        if (filtered.length === 0) {
+          emptyState.classList.remove('hidden');
+        } else {
+          emptyState.classList.add('hidden');
+          filtered.forEach(product => {
+            const card = document.createElement('div');
+            card.className = "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition flex flex-col";
+            card.innerHTML = `
+              <a href="product.html?id=${product.id}" class="block relative h-48 bg-gray-100 overflow-hidden">
+                <img src="${product.image}" loading="lazy" alt="${product.name}" class="w-full h-full object-cover hover:scale-105 transition duration-500">
+              </a>
+              <div class="p-4 flex flex-col flex-grow">
+                <p class="text-xs text-pink-500 font-semibold mb-1 uppercase tracking-wider">${product.category}</p>
+                <h3 class="font-bold text-gray-800 leading-tight mb-2 flex-grow">
+                  <a href="product.html?id=${product.id}" class="hover:text-pink-600">${product.name}</a>
+                </h3>
+                <div class="flex justify-between items-center mt-2">
+                  <span class="text-lg font-bold text-gray-900">$${product.price.toFixed(2)}</span>
+                  <button class="add-to-cart-btn bg-pink-100 text-pink-600 hover:bg-pink-500 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition" data-id="${product.id}" aria-label="Add to cart">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                  </button>
+                </div>
+              </div>
+            `;
+            grid.appendChild(card);
+          });
+
+          // Attach add to cart events
+          document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const id = e.currentTarget.getAttribute('data-id');
+              const product = window.appData.products.find(p => p.id === id);
+              if(product) {
+                window.state.addToCart(product, 1);
+                alert("Added to cart!");
+              }
+            });
+          });
+        }
+      }
+
+      // Initial Render
+      renderProducts();
+    });
+  </script>
+</body>
+</html>

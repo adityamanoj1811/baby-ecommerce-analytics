@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - BabyBoutique</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased min-h-screen flex flex-col">
+
+  <main class="flex-grow max-w-4xl mx-auto px-4 py-8 w-full">
+    <h1 class="text-3xl font-bold mb-8 text-center">Secure Checkout</h1>
+    
+    <div id="checkout-flow" class="flex flex-col md:flex-row gap-8">
+      <!-- Form -->
+      <div class="md:w-2/3 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <form id="checkout-form">
+          <h2 class="text-xl font-bold mb-4 border-b pb-2">Shipping Information</h2>
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">First Name</label>
+              <input type="text" id="fname" required class="w-full p-2 border rounded focus:border-pink-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Last Name</label>
+              <input type="text" id="lname" required class="w-full p-2 border rounded focus:border-pink-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="mb-6">
+            <label class="block text-sm text-gray-600 mb-1">Address</label>
+            <input type="text" id="address" required class="w-full p-2 border rounded focus:border-pink-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4 mb-8">
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">City</label>
+              <input type="text" id="city" required class="w-full p-2 border rounded focus:border-pink-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-600 mb-1">Zip Code</label>
+              <input type="text" id="zip" required class="w-full p-2 border rounded focus:border-pink-500 focus:outline-none">
+            </div>
+          </div>
+
+          <h2 class="text-xl font-bold mb-4 border-b pb-2">Payment (Mock)</h2>
+          <p class="text-sm text-gray-500 mb-4 bg-yellow-50 p-2 rounded">Note: This is a simulation. No real payment will be processed.</p>
+          <div class="mb-6">
+            <label class="block text-sm text-gray-600 mb-1">Credit Card Number</label>
+            <input type="text" placeholder="1234 5678 9101 1121" class="w-full p-2 border rounded bg-gray-50" readonly value="1234 5678 9101 1121">
+          </div>
+
+          <button type="submit" class="w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 rounded-xl shadow-lg transition text-lg mt-4">
+            Place Order
+          </button>
+        </form>
+      </div>
+
+      <!-- Summary -->
+      <div class="md:w-1/3">
+        <div class="bg-gray-100 p-6 rounded-2xl border border-gray-200 sticky top-4">
+          <h2 class="text-lg font-bold mb-4">In Your Cart</h2>
+          <div id="checkout-cart-items" class="space-y-4 mb-6 border-b border-gray-200 pb-4">
+            <!-- JS inserts items -->
+          </div>
+          <div class="flex justify-between font-bold text-lg">
+            <span>Total:</span>
+            <span id="checkout-total" class="text-pink-600"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success View -->
+    <div id="success-view" class="hidden text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
+      <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+      </div>
+      <h1 class="text-4xl font-bold text-gray-800 mb-4">Thank You!</h1>
+      <p class="text-lg text-gray-600 mb-2">Your order <span id="order-id" class="font-bold text-gray-900"></span> has been placed.</p>
+      <p class="text-gray-500 mb-8">We've sent a mock confirmation email to you.</p>
+      <a href="orders.html" class="inline-block bg-pink-500 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-600 transition">View My Orders</a>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const cart = window.state.getCart();
+      if(cart.length === 0) {
+        window.location.href = "cart.html";
+        return;
+      }
+
+      // Render checkout summary
+      const itemsContainer = document.getElementById('checkout-cart-items');
+      cart.forEach(item => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between text-sm";
+        div.innerHTML = `
+          <span class="text-gray-600 break-words w-2/3">${item.quantity}x ${item.name}</span>
+          <span class="font-medium">$${(item.price * item.quantity).toFixed(2)}</span>
+        `;
+        itemsContainer.appendChild(div);
+      });
+      document.getElementById('checkout-total').textContent = '$' + window.state.getCartTotal().toFixed(2);
+
+      // Handle Submit
+      document.getElementById('checkout-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const address = {
+          name: document.getElementById('fname').value + ' ' + document.getElementById('lname').value,
+          address: document.getElementById('address').value,
+          city: document.getElementById('city').value,
+          zip: document.getElementById('zip').value
+        };
+
+        // Place order handles the purchase GA4 event natively inside state.js!
+        const order = window.state.placeOrder(address);
+        
+        if(order) {
+          document.getElementById('checkout-flow').classList.add('hidden');
+          document.getElementById('success-view').classList.remove('hidden');
+          document.getElementById('order-id').textContent = order.orderId;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

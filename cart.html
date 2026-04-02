@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shopping Cart - BabyBoutique</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/app.js"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased min-h-screen flex flex-col">
+
+  <main class="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
+    <h1 class="text-3xl font-bold mb-8">Shopping Cart</h1>
+    
+    <div class="flex flex-col lg:flex-row gap-8">
+      
+      <!-- Cart Items -->
+      <div class="lg:w-2/3">
+        <div id="cart-items" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+          <!-- JS fills this -->
+        </div>
+        <div id="empty-cart" class="hidden bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
+          <p class="text-gray-500 mb-4 text-lg">Your cart is feeling a little light.</p>
+          <a href="products.html" class="inline-block bg-pink-500 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-600 transition">Continue Shopping</a>
+        </div>
+      </div>
+
+      <!-- Order Summary -->
+      <div id="order-summary" class="lg:w-1/3">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <h2 class="text-xl font-bold mb-6 border-b pb-4">Order Summary</h2>
+          <div class="flex justify-between mb-4">
+            <span class="text-gray-600">Subtotal</span>
+            <span id="subtotal" class="font-semibold text-gray-900"></span>
+          </div>
+          <div class="flex justify-between mb-4">
+            <span class="text-gray-600">Shipping</span>
+            <span class="text-green-500 font-semibold">Free</span>
+          </div>
+          <div class="border-t pt-4 flex justify-between items-center mb-6">
+            <span class="text-lg font-bold">Total</span>
+            <span id="total" class="text-2xl font-extrabold text-pink-500"></span>
+          </div>
+          <button id="checkout-btn" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition">
+            Proceed to Checkout
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const cartContainer = document.getElementById('cart-items');
+      const emptyCartEl = document.getElementById('empty-cart');
+      const orderSummaryEl = document.getElementById('order-summary');
+      const subtotalEl = document.getElementById('subtotal');
+      const totalEl = document.getElementById('total');
+
+      function renderCart() {
+        const cart = window.state.getCart();
+        cartContainer.innerHTML = '';
+        
+        if (cart.length === 0) {
+          cartContainer.classList.add('hidden');
+          orderSummaryEl.classList.add('hidden');
+          emptyCartEl.classList.remove('hidden');
+          return;
+        }
+        
+        cartContainer.classList.remove('hidden');
+        orderSummaryEl.classList.remove('hidden');
+        emptyCartEl.classList.add('hidden');
+
+        cart.forEach((item, index) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = `flex items-center gap-4 ${index !== 0 ? 'border-t pt-6' : ''}`;
+          itemEl.innerHTML = `
+            <img src="${item.image}" alt="${item.name}" class="w-24 h-24 object-cover rounded-lg bg-gray-100">
+            <div class="flex-grow">
+              <h3 class="font-bold text-gray-800"><a href="product.html?id=${item.id}" class="hover:text-pink-600">${item.name}</a></h3>
+              <p class="text-gray-500 text-sm">${item.category}</p>
+              <div class="flex items-center mt-2">
+                <select class="qty-select border rounded p-1 text-sm bg-gray-50 outline-none" data-id="${item.id}">
+                  ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${item.quantity === n ? 'selected' : ''}>Qty: ${n}</option>`).join('')}
+                </select>
+                <button class="remove-btn ml-4 text-sm text-red-500 hover:underline" data-id="${item.id}">Remove</button>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-lg">$${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          `;
+          cartContainer.appendChild(itemEl);
+        });
+
+        // Event listeners
+        document.querySelectorAll('.qty-select').forEach(select => {
+          select.addEventListener('change', (e) => {
+            const id = e.target.getAttribute('data-id');
+            const qty = parseInt(e.target.value);
+            window.state.updateQuantity(id, qty);
+            renderCart();
+          });
+        });
+
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.getAttribute('data-id');
+            window.state.removeFromCart(id);
+            renderCart();
+          });
+        });
+
+        // Totals
+        const total = window.state.getCartTotal();
+        subtotalEl.textContent = `$${total.toFixed(2)}`;
+        totalEl.textContent = `$${total.toFixed(2)}`;
+      }
+
+      // Initial Render
+      renderCart();
+
+      // Ensure view syncs
+      window.addEventListener('cartUpdated', renderCart);
+
+      // Checkout Button
+      document.getElementById('checkout-btn').addEventListener('click', () => {
+        const user = window.state.getUser();
+        if (!user) {
+          alert("Please login first to checkout.");
+          window.location.href = "auth.html?redirect=cart";
+          return;
+        }
+        
+        // Track begin_checkout
+        const cart = window.state.getCart();
+        const total = window.state.getCartTotal();
+        window.analytics.trackBeginCheckout(cart, total);
+        
+        window.location.href = "checkout.html";
+      });
+    });
+  </script>
+</body>
+</html>
